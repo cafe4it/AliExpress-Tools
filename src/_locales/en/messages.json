@@ -1,0 +1,10 @@
+{
+  "extName" : {
+    "message" : "AliExpress Affilate Tool",
+    "description" : "Extension name"
+  },
+  "extDescription" : {
+    "message" : "Import Products to Firebase...",
+    "description" : "Extension description"
+  }
+}

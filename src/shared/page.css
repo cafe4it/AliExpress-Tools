@@ -1,0 +1,27 @@
+#get-products-container {
+    position: fixed;
+    bottom: 0;
+    z-index: 100;
+    right: 0;
+    margin-right: 250px;
+    height: 40px !important;
+    background-color: #ddd;
+    width: 200px;
+}
+
+#get-products, #label_chkAll{
+    height: 30px !important;
+    margin-top: 5px !important;
+    float: right;
+    margin-right: 5px;
+}
+
+.chkProduct, #chkAll {
+    width : 20px;
+    height: 20px;
+}
+
+#label_chkAll {
+    margin-top: 10px !important;
+}
+
