@@ -22,7 +22,12 @@
     "hmr"
   ],
   "dependencies": {
-    "bootstrap": "^3.3.6"
+    "bootstrap": "^3.3.6",
+    "fixed-data-table": "^0.6.0",
+    "react": "^15.0.1",
+    "react-dom": "^15.0.1",
+    "react-redux": "^4.4.4",
+    "react-router": "^2.1.1"
   },
   "devDependencies": {
     "async": "^2.0.0-rc.3",
@@ -36,10 +41,13 @@
     "chokidar": "1.4.2",
     "cli-color": "1.1.0",
     "css-loader": "0.23.1",
+    "exports-loader": "^0.6.3",
     "expose-loader": "^0.7.1",
     "express": "4.13.4",
+    "extract-text-webpack-plugin": "^1.0.1",
     "file-loader": "0.8.5",
     "fs-extra": "0.26.5",
+    "imports-loader": "^0.6.5",
     "jquery": "^2.2.1",
     "json-loader": "0.5.4",
     "less": "^2.6.1",
