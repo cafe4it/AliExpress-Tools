@@ -1,7 +1,20 @@
+import _ from 'lodash';
 import React from 'react';
-import {Table, Column, Cell} from 'fixed-data-table';
 import async from 'async';
-require('style!css!fixed-data-table/dist/fixed-data-table.min.css');
+import ReactFireMixin from 'reactfire';
+import FireBase from 'firebase';
+
+//require('expose?jQuery!bootstrap-table/dist/bootstrap-table.min.js');
+//require('style!css!bootstrap-table/dist/bootstrap-table.min.css');
+_.mixin({
+	'findByValues': function(collection, property, values) {
+		return _.filter(collection, function(item) {
+			return _.includes(values, item[property]);
+		});
+	}
+});
+
+
 const categories = [
 	{id: 3, name: 'Apparel & Accessories'},
 	{id: 34, name: 'Automobiles & Motorcycles'},
@@ -55,6 +68,7 @@ export default class Home extends React.Component {
 		this.__localCurrencyChange = this.__localCurrencyChange.bind(this);
 		this.__pageSizeChange = this.__pageSizeChange.bind(this);
 		this.__highQualityChange = this.__highQualityChange.bind(this);
+		this.__goToPage = this.__goToPage.bind(this);
 		this.state = {
 			selectedFields: defaultFields,
 			selectedCurrency: 'USD',
@@ -95,8 +109,8 @@ export default class Home extends React.Component {
 					let products = [];
 					let totalResults = 0;
 					if (res.errorCode === 20010000) {
-						products = res.result.products;
-						totalResults = res.result.totalResults;
+						products = (res.result) ? res.result.products : [];
+						totalResults = (res.result) ? res.result.totalResults : 0;
 					} else {
 						products = [];
 						totalResults = 0;
@@ -108,51 +122,36 @@ export default class Home extends React.Component {
 				})
 			},
 			function (result, cb2) {
-				let requestUrls = _.chain(result.products).map((p)=> {
-					return p.productUrl
-				}).join(',').value();
-				let promotionApi = promotionLinksTpl({
-					appKey: appKey,
-					trackingId: trackingId,
-					requestUrls: requestUrls
-				});
-				$.get(promotionApi, function (res) {
-					let promotionUrls = [];
-					if (res.errorCode === 20010000) {
-						promotionUrls = res.result.promotionUrls;
-					}
-					console.log(promotionUrls.length);
-					if (promotionUrls.length > 0) {
-						let products = _.map(result.products, (p)=> {
-							let _p = _.find(promotionUrls, (pU)=> {
-								return pU.url == p.productUrl
-							});
-							if (_p) p = _.extend(p, {promotionUrl : _p.promotionUrl});
-							return p;
-						});
-						result = _.extend(result, {products: products});
-					}
+				if(result.products.length <= 0){
 					cb2(null, result);
-				})
-				/*async.concat(result.products,
-				 function (productId, cb21) {
-				 let productDetailRequest = productDetailTpl({
-				 appKey: appKey,
-				 fields: _fields,
-				 productId: productId
-				 });
-				 $.get(productDetailRequest, function (res) {
-				 if (res.errorCode === 20010000) {
-				 cb21(null, res.result);
-				 }
-				 })
-				 },
-				 function (error, products) {
-				 cb2(error, {
-				 totalResult: result.totalResult,
-				 products: products
-				 })
-				 })*/
+				}else{
+					let requestUrls = _.chain(result.products).map((p)=> {
+						return p.productUrl
+					}).join(',').value();
+					let promotionApi = promotionLinksTpl({
+						appKey: appKey,
+						trackingId: trackingId,
+						requestUrls: requestUrls
+					});
+					$.get(promotionApi, function (res) {
+						let promotionUrls = [];
+						if (res.errorCode === 20010000) {
+							promotionUrls = res.result.promotionUrls;
+						}
+						//console.log(promotionUrls.length);
+						if (promotionUrls.length > 0) {
+							let products = _.map(result.products, (p)=> {
+								let _p = _.find(promotionUrls, (pU)=> {
+									return pU.url == p.productUrl
+								});
+								if (_p) p = _.extend(p, {promotionUrl: _p.promotionUrl});
+								return p;
+							});
+							result = _.extend(result, {products: products});
+						}
+						cb2(null, result);
+					})
+				}
 			}
 		], function (error, result) {
 			self.setState(result);
@@ -189,6 +188,18 @@ export default class Home extends React.Component {
 		this.state.highQualityItems = e.target.checked;
 	}
 
+	__goToPage(page){
+		//console.log(i);
+		let totalResult = this.state.totalResult;
+		let pageSize = this.state.selectedPageSize;
+		let totalPage = Math.round(totalResult/pageSize);
+		if(page > 0 && page < totalPage){
+			this.setState({pageNo : page},function(){
+				this._doSearch();
+			});
+		}
+	}
+
 	componentDidMount() {
 		let defaultValues = _.union(_.concat(this.state.selectedFields, this.state.selectedCurrency, this.state.selectedSortBy));
 
@@ -202,7 +213,7 @@ export default class Home extends React.Component {
 		let ResultSection = (this.state.products.length > 0) ?
 			<ResultList totalResult={this.state.totalResult} outputFields={this.state.selectedFields}
 			            products={this.state.products} currency={this.state.selectedCurrency} pageNo={this.state.pageNo}
-			            pageSize={this.state.selectedPageSize}/> : '';
+			            pageSize={this.state.selectedPageSize} goToPage={this.__goToPage}/> : '';
 
 		return <div>
 			<div className="row">
@@ -268,12 +279,34 @@ export default class Home extends React.Component {
 	}
 }
 
+const cheapToysDB = new FireBase("https://aliexpress.firebaseio.com/sites/cheaptoys4yz");
+
 let ResultList = React.createClass({
 	__checkAllProductsChange(e){
 		let isChecked = e.target.checked;
-		$('input[name="chkProduct"]').map(()=> {
-			$(this).prop('chẹcked', isChecked);
-		})
+		let checkboxes = document.querySelectorAll('input[name="chkProduct"]');
+		for (let i = 0; i < checkboxes.length; i++) {
+			checkboxes[i].setAttribute('checked', isChecked);
+		}
+	},
+	__importToFireBase(e){
+		let checkboxes = document.querySelectorAll('input[name="chkProduct"]:checked');
+		let products = this.props.products;
+		let productIds = _.map(checkboxes, (chk)=> {
+			return parseInt(chk.value);
+		});
+		let _products = _.findByValues(products, 'productId', productIds);
+		if(_products.length > 0){
+			cheapToysDB.set(_products);
+		}
+	},
+	__toNextPage(e){
+		let currentPage = this.props.pageNo;
+		this.props.goToPage(++currentPage);
+	},
+	__toPreviousPage(e){
+		let currentPage = this.props.pageNo;
+		this.props.goToPage(--currentPage);
 	},
 	render(){
 
@@ -284,7 +317,11 @@ let ResultList = React.createClass({
 		let totalPage = Math.round(totalResult / pageSize);
 		let paginationSection = '';
 		if (currentPage < totalPage) {
-
+			paginationSection = <div>
+				<button className="btn btn-warning" onClick={this.__toPreviousPage}>Prev Page</button>&nbsp;
+				<span className="bg-success">{`${currentPage}/${totalPage}`}</span>
+				&nbsp;<button className="btn btn-primary" onClick={this.__toNextPage}>Next Page</button>
+			</div>
 		}
 		return (
 			<div className="row">
@@ -294,54 +331,44 @@ let ResultList = React.createClass({
 					<p className="bg-danger">Found : {this.props.totalResult}</p>
 
 					<div className="table-responsive">
-						<Table
-							rowsCount={products.length}
-							rowHeight={100}
-							width={1140}
-							height={500}
-							headerHeight={30}
-							>
-							<Column
-								header={<Cell><input type="checkbox" ref="chkAllProducts" onChange={this.__checkAllProductsChange}/></Cell>}
-								cell={props => (<Cell {...props}>
-								<input type="checkbox" value={products[props.rowIndex].productId} name="chkProduct"/>
-							</Cell>)} width={50}/>
-							<Column cell={props => (<Cell {...props}>
-								<span className="text-center">{props.rowIndex}</span>
-							</Cell>)} width={50}/>
-							<Column header={<Cell>Image</Cell>} cell={props => (<Cell {...props}>
-							<a href={products[props.rowIndex].productUrl} target="_blank" data-toggle="tooltip" data-placement="right" title={products[props.rowIndex].productTitle}><img src={products[props.rowIndex].imageUrl} className="img-responsive"/></a>
-							</Cell>)} width={100}/>
-							<Column cell={props => (<Cell {...props}>
-							<b className="bg-primary">{this.props.currency}</b>
-							</Cell>)} width={50}/>
-							<Column header={<Cell>Original Price</Cell>} cell={props => (<Cell {...props}>
-								{products[props.rowIndex].originalPrice}
-							</Cell>)} width={100}/>
-							<Column header={<Cell>Sale Price</Cell>} cell={props => (<Cell {...props}>
-								{products[props.rowIndex].salePrice}
-							</Cell>)} width={100}/>
-							<Column header={<Cell>Commission</Cell>} cell={props => (<Cell {...props}>
-								{products[props.rowIndex]['commission']}
-							</Cell>)} width={100}/>
-							<Column header={<Cell>Commission Rate</Cell>} cell={props => (<Cell {...props}>
-								{products[props.rowIndex].commissionRate}
-							</Cell>)} width={100}/>
-							<Column header={<Cell>30 days</Cell>} cell={props => (<Cell {...props}>
-								{products[props.rowIndex]['30daysCommission']}
-							</Cell>)} width={100}/>
-							<Column header={<Cell>Volume</Cell>} cell={props => (<Cell {...props}>
-								{products[props.rowIndex].volume}
-							</Cell>)} width={100}/>
-							<Column header={<Cell>Promotion Url</Cell>} cell={props => (<Cell {...props}>
-								{products[props.rowIndex].promotionUrl}
-							</Cell>)} width={200}/>
-						</Table>
+						<table className="table" id="tblProducts" data-toggle="table">
+							<thead>
+								<tr>
+									<th><input type="checkbox" ref="chkAllProducts" onChange={this.__checkAllProductsChange}/></th>
+									<th>Image</th>
+									<th>Currency</th>
+									<th>Original Price</th>
+									<th>Sale Price</th>
+									<th>Commission</th>
+									<th>Commission Rate</th>
+									<th>30 days commission</th>
+									<th>Volume</th>
+									<th>Promotion Url</th>
+								</tr>
+							</thead>
+							<tbody>
+							{products.map((p)=>{
+								return <tr key={p.productId}>
+									<td><input type="checkbox" value={p.productId} name="chkProduct"/></td>
+									<td><a href={p.productUrl} target="_blank" data-toggle="tooltip" data-placement="right" title={p.productTitle}><img src={p.imageUrl} className="img-responsive" width="100px"/></a></td>
+									<td>{this.props.currency}</td>
+									<td>{p.originalPrice}</td>
+									<td>{p.salePrice}</td>
+									<td>{p.commission}</td>
+									<td>{p.commissionRate}</td>
+									<td>{p['30daysCommission']}</td>
+									<td>{p.volume}</td>
+									<td>{p.promotionUrl}</td>
+								</tr>
+							})}
+							</tbody>
+						</table>
 					</div>
 					<br/>
-
+					{paginationSection}
+					<br/>
 					<p>
-						<button className="btn btn-primary">Next Page</button>
+						<button className="btn btn-success" onClick={this.__importToFireBase}>Import To Firebase</button>
 					</p>
 				</div>
 			</div>

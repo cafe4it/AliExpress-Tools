@@ -23,11 +23,14 @@
   ],
   "dependencies": {
     "bootstrap": "^3.3.6",
+    "bootstrap-table": "^1.10.1",
+    "firebase": "^2.4.2",
     "fixed-data-table": "^0.6.0",
     "react": "^15.0.1",
     "react-dom": "^15.0.1",
     "react-redux": "^4.4.4",
-    "react-router": "^2.1.1"
+    "react-router": "^2.1.1",
+    "reactfire": "^0.6.0"
   },
   "devDependencies": {
     "async": "^2.0.0-rc.3",

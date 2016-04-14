@@ -195,6 +195,10 @@ function configGenerator(Manifest) {
 					}
 				])
 
+				loaders = loaders.concat([
+					{ test: require.resolve("jquery"), loader: "expose?$!expose?jQuery" }
+				])
+
 
 				// NOTE Custom loaders
 				// loaders = loaders.concat([...])
