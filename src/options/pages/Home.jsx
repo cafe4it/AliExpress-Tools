@@ -7,8 +7,8 @@ import FireBase from 'firebase';
 //require('expose?jQuery!bootstrap-table/dist/bootstrap-table.min.js');
 //require('style!css!bootstrap-table/dist/bootstrap-table.min.css');
 _.mixin({
-	'findByValues': function(collection, property, values) {
-		return _.filter(collection, function(item) {
+	'findByValues': function (collection, property, values) {
+		return _.filter(collection, function (item) {
 			return _.includes(values, item[property]);
 		});
 	}
@@ -122,9 +122,9 @@ export default class Home extends React.Component {
 				})
 			},
 			function (result, cb2) {
-				if(result.products.length <= 0){
+				if (result.products.length <= 0) {
 					cb2(null, result);
-				}else{
+				} else {
 					let requestUrls = _.chain(result.products).map((p)=> {
 						return p.productUrl
 					}).join(',').value();
@@ -188,13 +188,13 @@ export default class Home extends React.Component {
 		this.state.highQualityItems = e.target.checked;
 	}
 
-	__goToPage(page){
+	__goToPage(page) {
 		//console.log(i);
 		let totalResult = this.state.totalResult;
 		let pageSize = this.state.selectedPageSize;
-		let totalPage = Math.round(totalResult/pageSize);
-		if(page > 0 && page < totalPage){
-			this.setState({pageNo : page},function(){
+		let totalPage = Math.round(totalResult / pageSize);
+		if (page > 0 && page < totalPage) {
+			this.setState({pageNo: page}, function () {
 				this._doSearch();
 			});
 		}
@@ -278,8 +278,10 @@ export default class Home extends React.Component {
 		</div>
 	}
 }
-
-const cheapToysDB = new FireBase("https://aliexpress.firebaseio.com/sites/cheaptoys4yz");
+const cheapToysDB_Url = 'https://aliexpress.firebaseio.com/sites/cheaptoys4yz/';
+const cheapToysDB_ProductsUrl = 'https://aliexpress.firebaseio.com/sites/cheaptoys4yz/products';
+const cheapToysDB_ProductUrlTpl = _.template('https://aliexpress.firebaseio.com/sites/cheaptoys4yz/products/<%=productId%>');
+const cheapToysDB_products = new FireBase(cheapToysDB_ProductsUrl);
 
 let ResultList = React.createClass({
 	__checkAllProductsChange(e){
@@ -296,8 +298,12 @@ let ResultList = React.createClass({
 			return parseInt(chk.value);
 		});
 		let _products = _.findByValues(products, 'productId', productIds);
-		if(_products.length > 0){
-			cheapToysDB.set(_products);
+
+		if (_products.length > 0) {
+			_.each(_products, (p)=> {
+				let db_product = new FireBase(cheapToysDB_ProductUrlTpl({productId : p.productId}));
+				db_product.set(_.extend(p, {volume : parseInt(p.volume)}));
+			})
 		}
 	},
 	__toNextPage(e){
@@ -307,6 +313,11 @@ let ResultList = React.createClass({
 	__toPreviousPage(e){
 		let currentPage = this.props.pageNo;
 		this.props.goToPage(--currentPage);
+	},
+	__testDB(){
+		/*cheapToysDB_products.on('value', (snapshot)=> {
+			console.log(snapshot.val());
+		})*/
 	},
 	render(){
 
@@ -318,9 +329,11 @@ let ResultList = React.createClass({
 		let paginationSection = '';
 		if (currentPage < totalPage) {
 			paginationSection = <div>
-				<button className="btn btn-warning" onClick={this.__toPreviousPage}>Prev Page</button>&nbsp;
+				<button className="btn btn-warning" onClick={this.__toPreviousPage}>Prev Page</button>
+				&nbsp;
 				<span className="bg-success">{`${currentPage}/${totalPage}`}</span>
-				&nbsp;<button className="btn btn-primary" onClick={this.__toNextPage}>Next Page</button>
+				&nbsp;
+				<button className="btn btn-primary" onClick={this.__toNextPage}>Next Page</button>
 			</div>
 		}
 		return (
@@ -333,24 +346,28 @@ let ResultList = React.createClass({
 					<div className="table-responsive">
 						<table className="table" id="tblProducts" data-toggle="table">
 							<thead>
-								<tr>
-									<th><input type="checkbox" ref="chkAllProducts" onChange={this.__checkAllProductsChange}/></th>
-									<th>Image</th>
-									<th>Currency</th>
-									<th>Original Price</th>
-									<th>Sale Price</th>
-									<th>Commission</th>
-									<th>Commission Rate</th>
-									<th>30 days commission</th>
-									<th>Volume</th>
-									<th>Promotion Url</th>
-								</tr>
+							<tr>
+								<th><input type="checkbox" ref="chkAllProducts"
+								           onChange={this.__checkAllProductsChange}/></th>
+								<th>Image</th>
+								<th>Currency</th>
+								<th>Original Price</th>
+								<th>Sale Price</th>
+								<th>Commission</th>
+								<th>Commission Rate</th>
+								<th>30 days commission</th>
+								<th>Volume</th>
+								<th>Promotion Url</th>
+							</tr>
 							</thead>
 							<tbody>
-							{products.map((p)=>{
+							{products.map((p)=> {
 								return <tr key={p.productId}>
 									<td><input type="checkbox" value={p.productId} name="chkProduct"/></td>
-									<td><a href={p.productUrl} target="_blank" data-toggle="tooltip" data-placement="right" title={p.productTitle}><img src={p.imageUrl} className="img-responsive" width="100px"/></a></td>
+									<td><a href={p.productUrl} target="_blank" data-toggle="tooltip"
+									       data-placement="right" title={p.productTitle}><img src={p.imageUrl}
+									                                                          className="img-responsive"
+									                                                          width="100px"/></a></td>
 									<td>{this.props.currency}</td>
 									<td>{p.originalPrice}</td>
 									<td>{p.salePrice}</td>
@@ -367,8 +384,12 @@ let ResultList = React.createClass({
 					<br/>
 					{paginationSection}
 					<br/>
+
 					<p>
-						<button className="btn btn-success" onClick={this.__importToFireBase}>Import To Firebase</button>
+						<button className="btn btn-success" onClick={this.__importToFireBase}>Import To Firebase
+						</button>
+
+						<button className="btn btn-danger" onClick={this.__testDB}>Received Products</button>
 					</p>
 				</div>
 			</div>
