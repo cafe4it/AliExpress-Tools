@@ -14,6 +14,9 @@ _.mixin({
 	}
 });
 
+let _textToNumber = (str) => {
+    return Number(str.replace(/[^0-9\.]+/g, ""));
+}
 
 const categories = [
 	{id: 3, name: 'Apparel & Accessories'},
@@ -145,7 +148,12 @@ export default class Home extends React.Component {
 									return pU.url == p.productUrl
 								});
 								if (_p) p = _.extend(p, {promotionUrl: _p.promotionUrl});
-								return p;
+
+								return _.extend(p,{
+                                    volume : _textToNumber(p.volume),
+                                    _originalPrice : _textToNumber(p.originalPrice),
+                                    _salePrice : _textToNumber(p.salePrice)
+                                });
 							});
 							result = _.extend(result, {products: products});
 						}
@@ -302,7 +310,7 @@ let ResultList = React.createClass({
 		if (_products.length > 0) {
 			_.each(_products, (p)=> {
 				let db_product = new FireBase(cheapToysDB_ProductUrlTpl({productId : p.productId}));
-				db_product.set(_.extend(p, {volume : parseInt(p.volume)}));
+				db_product.set(p);
 			})
 		}
 	},
