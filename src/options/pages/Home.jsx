@@ -287,6 +287,7 @@ export default class Home extends React.Component {
 	}
 }
 const cheapToysDB_Url = 'https://aliexpress.firebaseio.com/sites/cheaptoys4yz/';
+const cheapToysDB_TagsUrl = 'https://aliexpress.firebaseio.com/sites/cheaptoys4yz/tags';
 const cheapToysDB_ProductsUrl = 'https://aliexpress.firebaseio.com/sites/cheaptoys4yz/products';
 const cheapToysDB_ProductUrlTpl = _.template('https://aliexpress.firebaseio.com/sites/cheaptoys4yz/products/<%=productId%>');
 const cheapToysDB_products = new FireBase(cheapToysDB_ProductsUrl);
